@@ -12,6 +12,8 @@
         android:layout_height="64dp"
         android:layout_gravity="center"
         android:layout_marginBottom="8dp"
+        android:background="@drawable/image_button_background"
+        android:foreground="@drawable/image_button_foreground"
         android:src="@drawable/ic_play" />
 
     <TextView
@@ -21,8 +23,7 @@
         android:ellipsize="end"
         android:maxLines="2"
         android:textAlignment="center"
-        android:textColor="?attr/colorOnBackground"
-        android:textSize="16sp"
+        android:textAppearance="?android:attr/textAppearanceListItem"
         tools:text="Sound Name" />
 
 </LinearLayout>

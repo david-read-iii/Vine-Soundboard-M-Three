@@ -1,7 +1,7 @@
 <resources>
 
     <!-- Base application theme. -->
-    <style name="Theme.VineSoundboard" parent="Theme.MaterialComponents.Light.DarkActionBar">
+    <style name="Theme.VineSoundboard" parent="Theme.MaterialComponents">
 
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/vine_green</item>
@@ -26,6 +26,15 @@
         <!-- Navigation bar color. -->
         <item name="android:navigationBarColor">?attr/colorPrimaryVariant</item>
 
+        <!-- Default Toolbar style. -->
+        <item name="toolbarStyle">@style/ToolbarStyle</item>
+
+    </style>
+
+    <!-- Style for all app bars. -->
+    <style name="ToolbarStyle" parent="Widget.MaterialComponents.Toolbar">
+        <item name="android:background">?attr/colorPrimary</item>
+        <item name="titleTextColor">?attr/colorOnPrimary</item>
     </style>
 
 </resources>
