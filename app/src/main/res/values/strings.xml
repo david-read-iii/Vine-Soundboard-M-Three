@@ -6,8 +6,25 @@
     <!-- Content description for a play button. -->
     <string name="play_sound_content_description">Play %1$s</string>
 
-    <!-- Sound options dialog. -->
+    <!-- Sound options context menu. -->
     <string name="sound_options_dialog_label">Options for \"%1$s\"</string>
     <string name="download_option_label">Download</string>
+
+    <!-- MainActivity app bar. -->
+    <string name="settings_action_label">Settings</string>
+
+    <!-- Settings. -->
+    <string name="settings_activity_label">Settings</string>
+    <string name="order_by_label">Order By</string>
+    <string name="order_by_key" translatable="false">order_by</string>
+    <string name="order_by_default_value">alphabetical_ascending</string>
+    <string-array name="order_by_labels">
+        <item>Alphabetical Ascending</item>
+        <item>Alphabetical Descending</item>
+    </string-array>
+    <string-array name="order_by_values" translatable="false">
+        <item>alphabetical_ascending</item>
+        <item>alphabetical_descending</item>
+    </string-array>
 
 </resources>

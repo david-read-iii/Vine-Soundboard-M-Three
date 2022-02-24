@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <ListPreference
+        app:defaultValue="@string/order_by_default_value"
+        app:entries="@array/order_by_labels"
+        app:entryValues="@array/order_by_values"
+        app:icon="@drawable/ic_order_by"
+        app:key="@string/order_by_key"
+        app:title="@string/order_by_label" />
+
+</androidx.preference.PreferenceScreen>

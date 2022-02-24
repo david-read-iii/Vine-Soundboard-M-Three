@@ -27,11 +27,6 @@ import java.util.List;
 public class Soundboard {
 
     /**
-     * Enum for specifying the sort order of {@link Sound}s in {@link #soundList}.
-     */
-    public enum SortOrder {ALPHABETICAL_ASCENDING, ALPHABETICAL_DESCENDING}
-
-    /**
      * {@link String} tag for log messages originating from this {@link Soundboard}.
      */
     private static final String LOG_TAG = Soundboard.class.getSimpleName();
@@ -52,9 +47,10 @@ public class Soundboard {
     private List<Sound> soundList;
 
     /**
-     * {@link SortOrder} specifying what sort order should be applied to {@link #soundList}.
+     * {@link String} specifying what sort order should be applied to {@link #soundList}. Possible
+     * values are at {@link R.array#order_by_values}.
      */
-    private SortOrder sortOrder;
+    private String sortOrder;
 
     /**
      * {@link AssetManager} for accessing audio asset files.
@@ -62,11 +58,19 @@ public class Soundboard {
     private AssetManager assetManager;
 
     /**
+     * {@link Context} for accessing string resources.
+     */
+    private Context context;
+
+    /**
      * Constructs a new {@link Soundboard}.
      *
      * @param context {@link Context} for getting audio resources.
      */
     private Soundboard(Context context) {
+
+        // Initialize Context.
+        this.context = context;
 
         // Setup the SoundPool.
         AudioAttributes attributes = new AudioAttributes.Builder()
@@ -111,7 +115,7 @@ public class Soundboard {
         }
 
         // Set default sorting of soundList.
-        setSortOrder(SortOrder.ALPHABETICAL_ASCENDING);
+        setSortOrder(context.getString(R.string.order_by_default_value));
     }
 
     /**
@@ -153,24 +157,26 @@ public class Soundboard {
     /**
      * Sets the sort order of {@link Sound}s in {@link #soundList}.
      *
-     * @param sortOrder {@link SortOrder} specifying what sort order to apply.
+     * @param sortOrder {@link String} specifying what sort order to apply.
      */
-    public void setSortOrder(@NonNull SortOrder sortOrder) {
+    public void setSortOrder(@NonNull String sortOrder) {
 
         // Do nothing if this sort order is already applied.
-        if (this.sortOrder == sortOrder) {
+        if (this.sortOrder != null && this.sortOrder.equals(sortOrder)) {
             return;
         }
 
         // Apply the specified sort order.
-        if (sortOrder == SortOrder.ALPHABETICAL_ASCENDING) {
+        if (sortOrder.equals(context.getResources().getStringArray(R.array.order_by_values)[0])) {
+            // Apply alphabetical ascending sort order.
             soundList.sort(new Comparator<Sound>() {
                 @Override
                 public int compare(Sound sound1, Sound sound2) {
                     return sound1.getName().compareToIgnoreCase(sound2.getName());
                 }
             });
-        } else if (sortOrder == SortOrder.ALPHABETICAL_DESCENDING) {
+        } else if (sortOrder.equals(context.getResources().getStringArray(R.array.order_by_values)[1])) {
+            // Apply alphabetical descending order.
             soundList.sort(new Comparator<Sound>() {
                 @Override
                 public int compare(Sound sound1, Sound sound2) {
@@ -193,6 +199,14 @@ public class Soundboard {
         copyAssetFileToInternalStorage(soundList.get(index).getAudioAssetFileName(), "Download");
     }
 
+    /**
+     * Copies the audio resource with the given file name to a specified directory on the device's
+     * internal storage.
+     *
+     * @param assetFileName {@link String} file name of the audio resource to copy.
+     * @param outDirectory  {@link String} directory on the device's internal storage to copy the
+     *                      audio resource to.
+     */
     private void copyAssetFileToInternalStorage(@NonNull String assetFileName, @NonNull String outDirectory) {
         try {
             // Setup file copy helper objects.

@@ -3,12 +3,16 @@ package com.davidread.vinesoundboard;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,7 +69,9 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
 
         // Specify the sort order of the sounds in soundboard.
-        soundboard.setSortOrder(Soundboard.SortOrder.ALPHABETICAL_ASCENDING);
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String orderByPreferenceValue = sharedPreferences.getString(getString(R.string.order_by_key), getString(R.string.order_by_default_value));
+        soundboard.setSortOrder(orderByPreferenceValue);
 
         // Define the layout manager of soundRecyclerView.
         soundRecyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(), 3));
@@ -74,6 +80,38 @@ public class MainActivity extends AppCompatActivity {
         List<String> soundNames = soundboard.getSoundNames();
         SoundAdapter soundAdapter = new SoundAdapter(soundNames);
         soundRecyclerView.setAdapter(soundAdapter);
+    }
+
+    /**
+     * Invoked when this {@link MainActivity} creates its app bar menu. It simply passes the
+     * appropriate menu resource for the app bar.
+     *
+     * @param menu {@link Menu} where the app bar menu should be inflated.
+     * @return Whether the app bar should be displayed.
+     */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.app_bar_menu_main, menu);
+        return true;
+    }
+
+    /**
+     * Invoked when an app bar action button is selected.
+     *
+     * @param item {@link MenuItem} that is invoking this method.
+     * @return False to allow normal processing to proceed. True to consume it here.
+     */
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+
+        // When "Settings" is selected, start SettingsActivity.
+        if (item.getItemId() == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     /**
