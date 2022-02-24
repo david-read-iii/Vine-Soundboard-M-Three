@@ -6,10 +6,16 @@ import android.content.res.AssetManager;
 import android.media.AudioAttributes;
 import android.media.MediaMetadataRetriever;
 import android.media.SoundPool;
+import android.os.Environment;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,6 +30,11 @@ public class Soundboard {
      * Enum for specifying the sort order of {@link Sound}s in {@link #soundList}.
      */
     public enum SortOrder {ALPHABETICAL_ASCENDING, ALPHABETICAL_DESCENDING}
+
+    /**
+     * {@link String} tag for log messages originating from this {@link Soundboard}.
+     */
+    private static final String LOG_TAG = Soundboard.class.getSimpleName();
 
     /**
      * Static reference of this {@link Soundboard} to return in {@link #getInstance(Context)}.
@@ -46,6 +57,11 @@ public class Soundboard {
     private SortOrder sortOrder;
 
     /**
+     * {@link AssetManager} for accessing audio asset files.
+     */
+    private AssetManager assetManager;
+
+    /**
      * Constructs a new {@link Soundboard}.
      *
      * @param context {@link Context} for getting audio resources.
@@ -62,7 +78,7 @@ public class Soundboard {
                 .build();
 
         // Get String array of audio asset file names.
-        AssetManager assetManager = context.getAssets();
+        assetManager = context.getAssets();
         String[] assetFileNames = null;
         try {
             assetFileNames = assetManager.list("");
@@ -165,5 +181,41 @@ public class Soundboard {
 
         // Keep track of what sort order was applied in this Soundboard.
         this.sortOrder = sortOrder;
+    }
+
+    /**
+     * Copies the audio resource associated with the {@link Sound} in {@link #soundList} at the
+     * specified index to the device's download directory.
+     *
+     * @param index {@link Sound} in {@link #soundList} whose audio resource will be copied.
+     */
+    public void downloadSound(int index) {
+        copyAssetFileToInternalStorage(soundList.get(index).getAudioAssetFileName(), "Download");
+    }
+
+    private void copyAssetFileToInternalStorage(@NonNull String assetFileName, @NonNull String outDirectory) {
+        try {
+            // Setup file copy helper objects.
+            InputStream inputStream = assetManager.open(assetFileName);
+            String absoluteOutDirectory = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + outDirectory;
+            File outFile = new File(absoluteOutDirectory, assetFileName);
+            OutputStream outputStream = new FileOutputStream(outFile);
+
+            // Copy the file.
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, read);
+            }
+
+            // Cleanup.
+            inputStream.close();
+            inputStream = null;
+            outputStream.flush();
+            outputStream.close();
+            outputStream = null;
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Failed to copy asset file " + assetFileName + " to directory " + outDirectory, e);
+        }
     }
 }

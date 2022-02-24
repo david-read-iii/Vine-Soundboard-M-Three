@@ -7,7 +7,9 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.os.Bundle;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
@@ -30,6 +32,16 @@ public class MainActivity extends AppCompatActivity {
      * {@link RecyclerView} for displaying an item view for each sound name.
      */
     private RecyclerView soundRecyclerView;
+
+    /**
+     * {@link String} sound name that opened the context menu in this {@link MainActivity}.
+     */
+    private String selectedSoundName;
+
+    /**
+     * Index of the sound that opened the context menu in this {@link MainActivity}.
+     */
+    private int selectedSoundIndex;
 
     /**
      * Invoked when this {@link MainActivity} is initially starting. It simply initializes the
@@ -65,10 +77,45 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
+     * Invoked when a context menu is built in this {@link MainActivity}. It displays a context
+     * menu with options to perform on a selected sound.
+     *
+     * @param menu     The context menu being built.
+     * @param v        The view for which the context menu is being built.
+     * @param menuInfo Extra information about the item for which the context menu should be shown.
+     */
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        menu.setHeaderTitle(getString(R.string.sound_options_dialog_label, selectedSoundName));
+        getMenuInflater().inflate(R.menu.context_menu_main, menu);
+    }
+
+    /**
+     * Invoked when an item in the context menu is selected in this {@link MainActivity}.
+     *
+     * @param item The context menu item being selected.
+     * @return False to allow normal context menu processing to proceed. True to consume it here.
+     */
+    @Override
+    public boolean onContextItemSelected(@NonNull MenuItem item) {
+
+        /* If "Download" is selected, download the sound that opened the context menu to the
+         * device's downloads directory. */
+        if (item.getItemId() == R.id.action_download) {
+            soundboard.downloadSound(selectedSoundIndex);
+            return true;
+        }
+
+        return super.onContextItemSelected(item);
+    }
+
+    /**
      * {@link SoundHolder} is a model class that describes a single sound item view and metadata
      * about its place within a {@link RecyclerView}.
      */
-    private class SoundHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    private class SoundHolder extends RecyclerView.ViewHolder
+            implements View.OnClickListener, View.OnLongClickListener {
 
         /**
          * {@link ImageButton} for playing the sound.
@@ -96,6 +143,8 @@ public class MainActivity extends AppCompatActivity {
             playSoundImageButton = itemView.findViewById(R.id.play_sound_image_button);
             soundNameTextView = itemView.findViewById(R.id.sound_name_text_view);
             playSoundImageButton.setOnClickListener(this);
+            playSoundImageButton.setOnLongClickListener(this);
+            registerForContextMenu(playSoundImageButton);
         }
 
         /**
@@ -111,12 +160,26 @@ public class MainActivity extends AppCompatActivity {
         }
 
         /**
-         * Invoked when the {@link View} held by this {@link SoundHolder} is clicked. It plays this
+         * Invoked when {@link #playSoundImageButton} is clicked. It plays this
          * {@link SoundHolder}'s associated sound using {@link #soundboard}.
          */
         @Override
         public void onClick(View view) {
             soundboard.playSound(index);
+        }
+
+        /**
+         * Invoked when {@link #playSoundImageButton} is long clicked. It opens a context menu for
+         * this {@link SoundHolder}'s associated sound.
+         *
+         * @return Whether the click is handled in this callback.
+         */
+        @Override
+        public boolean onLongClick(View view) {
+            selectedSoundName = soundNameTextView.getText().toString();
+            selectedSoundIndex = index;
+            openContextMenu(view);
+            return true;
         }
     }
 
