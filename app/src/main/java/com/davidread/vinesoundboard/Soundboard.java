@@ -58,19 +58,11 @@ public class Soundboard {
     private AssetManager assetManager;
 
     /**
-     * {@link Context} for accessing string resources.
-     */
-    private Context context;
-
-    /**
      * Constructs a new {@link Soundboard}.
      *
      * @param context {@link Context} for getting audio resources.
      */
     private Soundboard(Context context) {
-
-        // Initialize Context.
-        this.context = context;
 
         // Setup the SoundPool.
         AudioAttributes attributes = new AudioAttributes.Builder()
@@ -115,7 +107,7 @@ public class Soundboard {
         }
 
         // Set default sorting of soundList.
-        setSortOrder(context.getString(R.string.order_by_default_value));
+        setSortOrder(context.getString(R.string.order_by_default_value), context);
     }
 
     /**
@@ -158,8 +150,9 @@ public class Soundboard {
      * Sets the sort order of {@link Sound}s in {@link #soundList}.
      *
      * @param sortOrder {@link String} specifying what sort order to apply.
+     * @param context   {@link Context} for getting string resources.
      */
-    public void setSortOrder(@NonNull String sortOrder) {
+    public void setSortOrder(@NonNull String sortOrder, @NonNull Context context) {
 
         // Do nothing if this sort order is already applied.
         if (this.sortOrder != null && this.sortOrder.equals(sortOrder)) {

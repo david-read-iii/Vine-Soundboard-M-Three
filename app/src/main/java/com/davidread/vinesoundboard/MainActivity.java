@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
         // Specify the sort order of the sounds in soundboard.
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         String orderByPreferenceValue = sharedPreferences.getString(getString(R.string.order_by_key), getString(R.string.order_by_default_value));
-        soundboard.setSortOrder(orderByPreferenceValue);
+        soundboard.setSortOrder(orderByPreferenceValue, this);
 
         // Define the layout manager of soundRecyclerView.
         soundRecyclerView.setLayoutManager(new GridLayoutManager(getApplicationContext(), 3));
