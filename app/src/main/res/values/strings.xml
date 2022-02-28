@@ -10,6 +10,10 @@
     <string name="sound_options_dialog_label">Options for \"%1$s\"</string>
     <string name="download_option_label">Download</string>
 
+    <!-- Snackbar messages. -->
+    <string name="download_success_message">Download successful</string>
+    <string name="download_fail_message">Download failed</string>
+
     <!-- MainActivity app bar. -->
     <string name="settings_action_label">Settings</string>
 

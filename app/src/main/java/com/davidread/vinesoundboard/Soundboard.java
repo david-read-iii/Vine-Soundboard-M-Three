@@ -184,28 +184,45 @@ public class Soundboard {
 
     /**
      * Copies the audio resource associated with the {@link Sound} in {@link #soundList} at the
-     * specified index to the device's download directory.
+     * specified index to the downloads directory on the device's external storage.
      *
      * @param index {@link Sound} in {@link #soundList} whose audio resource will be copied.
+     * @return True if the file copy operation succeeds.
      */
-    public void downloadSound(int index) {
-        copyAssetFileToInternalStorage(soundList.get(index).getAudioAssetFileName(), "Download");
+    public boolean downloadSound(int index) {
+
+        // Return false if the device's external storage is not mounted.
+        if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            Log.e(LOG_TAG, "Device's external storage must be mounted to perform operation.");
+            return false;
+        }
+
+        // Copy audio asset to the downloads directory.
+        String assetFileName = soundList.get(index).getAudioAssetFileName();
+        File downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        return copyAudioAssetToExternalStorage(assetFileName, downloadsDirectory);
     }
 
     /**
-     * Copies the audio resource with the given file name to a specified directory on the device's
-     * internal storage.
+     * Copies the audio asset with the given file name to the specified directory on the device's
+     * external storage.
      *
      * @param assetFileName {@link String} file name of the audio resource to copy.
-     * @param outDirectory  {@link String} directory on the device's internal storage to copy the
+     * @param outDirectory  {@link String} directory on the device's external storage to copy the
      *                      audio resource to.
+     * @return True if the file copy operation succeeds.
      */
-    private void copyAssetFileToInternalStorage(@NonNull String assetFileName, @NonNull String outDirectory) {
+    private boolean copyAudioAssetToExternalStorage(@NonNull String assetFileName, @NonNull File outDirectory) {
+
+        // Create the out directory if one doesn't already exist.
+        if (!outDirectory.exists()) {
+            outDirectory.mkdirs();
+        }
+
         try {
             // Setup file copy helper objects.
             InputStream inputStream = assetManager.open(assetFileName);
-            String absoluteOutDirectory = Environment.getExternalStorageDirectory().getAbsolutePath() + "/" + outDirectory;
-            File outFile = new File(absoluteOutDirectory, assetFileName);
+            File outFile = new File(outDirectory, assetFileName);
             OutputStream outputStream = new FileOutputStream(outFile);
 
             // Copy the file.
@@ -217,12 +234,13 @@ public class Soundboard {
 
             // Cleanup.
             inputStream.close();
-            inputStream = null;
             outputStream.flush();
             outputStream.close();
-            outputStream = null;
         } catch (IOException e) {
             Log.e(LOG_TAG, "Failed to copy asset file " + assetFileName + " to directory " + outDirectory, e);
+            return false;
         }
+
+        return true;
     }
 }
