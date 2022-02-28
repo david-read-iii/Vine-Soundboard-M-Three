@@ -19,6 +19,9 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import com.google.android.material.snackbar.BaseTransientBottomBar;
+import com.google.android.material.snackbar.Snackbar;
+
 import java.util.List;
 
 /**
@@ -141,7 +144,12 @@ public class MainActivity extends AppCompatActivity {
         /* If "Download" is selected, download the sound that opened the context menu to the
          * device's downloads directory. */
         if (item.getItemId() == R.id.action_download) {
-            soundboard.downloadSound(selectedSoundIndex);
+            boolean downloadSoundResult = soundboard.downloadSound(selectedSoundIndex);
+            if (downloadSoundResult) {
+                Snackbar.make(soundRecyclerView, R.string.download_success_message, BaseTransientBottomBar.LENGTH_SHORT).show();
+            } else {
+                Snackbar.make(soundRecyclerView, R.string.download_fail_message, BaseTransientBottomBar.LENGTH_SHORT).show();
+            }
             return true;
         }
 
