@@ -2,13 +2,19 @@ package com.davidread.vinesoundboard;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.Manifest;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
@@ -29,6 +35,11 @@ import java.util.List;
  * {@link #soundboard} and displays them in {@link #soundRecyclerView}.
  */
 public class MainActivity extends AppCompatActivity {
+
+    /**
+     * Int identifier for a permission request for write external storage.
+     */
+    private final int WRITE_EXTERNAL_STORAGE_REQUEST_CODE = 0;
 
     /**
      * {@link Soundboard} for getting sound names and playing sounds.
@@ -144,16 +155,114 @@ public class MainActivity extends AppCompatActivity {
         /* If "Download" is selected, download the sound that opened the context menu to the
          * device's downloads directory. */
         if (item.getItemId() == R.id.action_download) {
-            boolean downloadSoundResult = soundboard.downloadSound(selectedSoundIndex);
-            if (downloadSoundResult) {
-                Snackbar.make(soundRecyclerView, R.string.download_success_message, BaseTransientBottomBar.LENGTH_SHORT).show();
+
+            // Download only if permission to write external storage is granted.
+            if (checkForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    R.string.write_external_storage_permission_needed_message,
+                    WRITE_EXTERNAL_STORAGE_REQUEST_CODE)) {
+                downloadSound();
             } else {
-                Snackbar.make(soundRecyclerView, R.string.download_fail_message, BaseTransientBottomBar.LENGTH_SHORT).show();
+                // Show permission required snackbar.
+                Snackbar.make(soundRecyclerView, R.string.download_requires_permission_message,
+                        BaseTransientBottomBar.LENGTH_LONG).show();
             }
+
             return true;
         }
 
         return super.onContextItemSelected(item);
+    }
+
+    /**
+     * Invoked after a {@link #requestPermissions(String[], int)} call in this {@link MainActivity}.
+     *
+     * @param requestCode  The request code passed in {@link #requestPermissions(String[], int)}.
+     * @param permissions  The requested permissions.
+     * @param grantResults The grant results for the corresponding permissions.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        /* For resulting granted requests to write external storage, download the sound that most
+         * recently opened a context menu to the device's downloads directory. */
+        if (requestCode == WRITE_EXTERNAL_STORAGE_REQUEST_CODE
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            downloadSound();
+        }
+    }
+
+    /**
+     * Returns true if the specified permission has been granted. If false, then a rationale
+     * {@link AlertDialog} is shown that explains why this permission is required. Clicking "OK"
+     * on the dialog then requests the permission.
+     *
+     * @param permission         {@link String} name of the permission being checked.
+     * @param rationaleMessageId Int id of the string resource to be shown in the rationale
+     *                           {@link AlertDialog}. It should explain why this permission is
+     *                           required.
+     * @param requestCode        Int request code to use for
+     *                           {@link #requestPermissions(String[], int)} calls.
+     * @return True if the specified permission has already been granted. Will not return true for
+     * a permission granted through this method's call.
+     */
+    private boolean checkForPermission(String permission, int rationaleMessageId, int requestCode) {
+
+        // Check if permission is already granted.
+        if (ContextCompat.checkSelfPermission(this, permission)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            // Permission has not been granted. Check if a rationale AlertDialog should be shown.
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    permission)) {
+
+                // Show rationale AlertDialog explaining why this permission is needed.
+                new AlertDialog.Builder(this)
+                        .setTitle(R.string.permission_needed_dialog_label)
+                        .setMessage(rationaleMessageId)
+                        .setPositiveButton(android.R.string.ok,
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        // Request permission again.
+                                        ActivityCompat.requestPermissions(MainActivity.this,
+                                                new String[]{permission},
+                                                requestCode);
+                                    }
+                                })
+                        .create()
+                        .show();
+            }
+
+            // Do not show rationale AlertDialog. Just request permission again.
+            else {
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{permission}, requestCode);
+            }
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Copies the audio resource associated with the sound that most recently opened a context menu
+     * to the downloads directory on the device's external storage.
+     */
+    private void downloadSound() {
+
+        boolean downloadSoundResult = soundboard.downloadSound(selectedSoundIndex);
+
+        // Show result status snackbar.
+        if (downloadSoundResult) {
+            Snackbar.make(soundRecyclerView, R.string.download_success_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        } else {
+            Snackbar.make(soundRecyclerView, R.string.download_fail_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        }
     }
 
     /**
