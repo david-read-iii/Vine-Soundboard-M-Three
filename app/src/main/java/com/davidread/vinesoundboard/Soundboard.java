@@ -1,13 +1,19 @@
 package com.davidread.vinesoundboard;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
 import android.media.AudioAttributes;
 import android.media.MediaMetadataRetriever;
+import android.media.RingtoneManager;
 import android.media.SoundPool;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
 
@@ -197,50 +203,159 @@ public class Soundboard {
             return false;
         }
 
-        // Copy audio asset to the downloads directory.
-        String assetFileName = soundList.get(index).getAudioAssetFileName();
-        File downloadsDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        return copyAudioAssetToExternalStorage(assetFileName, downloadsDirectory);
-    }
-
-    /**
-     * Copies the audio asset with the given file name to the specified directory on the device's
-     * external storage.
-     *
-     * @param assetFileName {@link String} file name of the audio resource to copy.
-     * @param outDirectory  {@link String} directory on the device's external storage to copy the
-     *                      audio resource to.
-     * @return True if the file copy operation succeeds.
-     */
-    private boolean copyAudioAssetToExternalStorage(@NonNull String assetFileName, @NonNull File outDirectory) {
-
-        // Create the out directory if one doesn't already exist.
-        if (!outDirectory.exists()) {
-            outDirectory.mkdirs();
+        // Create a downloads directory if one doesn't already exist.
+        File downloadsDirectory =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        if (!downloadsDirectory.exists()) {
+            downloadsDirectory.mkdirs();
         }
 
+        /* Copy the audio asset to the downloads directory. Return false if the copy operation
+         * fails. */
+        String assetFileName = soundList.get(index).getAudioAssetFileName();
+        File outFile = new File(downloadsDirectory, assetFileName);
         try {
-            // Setup file copy helper objects.
             InputStream inputStream = assetManager.open(assetFileName);
-            File outFile = new File(outDirectory, assetFileName);
             OutputStream outputStream = new FileOutputStream(outFile);
-
-            // Copy the file.
-            byte[] buffer = new byte[1024];
-            int read;
-            while ((read = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, read);
-            }
-
-            // Cleanup.
-            inputStream.close();
-            outputStream.flush();
-            outputStream.close();
+            writeToOutputStream(inputStream, outputStream);
         } catch (IOException e) {
-            Log.e(LOG_TAG, "Failed to copy asset file " + assetFileName + " to directory " + outDirectory, e);
+            Log.e(LOG_TAG, "Failed to copy data from asset file " + assetFileName
+                    + " to directory " + downloadsDirectory, e);
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Copies the audio resource associated with the {@link Sound} in {@link #soundList} at the
+     * specified index to the ringtones directory on the device's external storage. Then, it sets
+     * that audio resource as the device's ringtone.
+     *
+     * @param index   {@link Sound} in {@link #soundList} whose audio resource will be copied.
+     * @param context {@link Context} for putting an entry in the {@link MediaStore} database.
+     * @return True if the set as ringtone operation succeeds.
+     */
+    public boolean setAsRingtone(int index, Context context) {
+
+        // Return false if the device's external storage is not mounted.
+        if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+            Log.e(LOG_TAG, "Device's external storage must be mounted to perform operation.");
+            return false;
+        }
+
+        // Create a ringtones directory if one doesn't already exist.
+        File ringtonesDirectory =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES);
+        if (!ringtonesDirectory.exists()) {
+            ringtonesDirectory.mkdirs();
+        }
+
+        /* Copy the audio asset to the ringtones directory. Return false if the copy operation
+         * fails. */
+        String assetFileName = soundList.get(index).getAudioAssetFileName();
+        File outFile = new File(ringtonesDirectory, assetFileName);
+        try {
+            InputStream inputStream = assetManager.open(assetFileName);
+            OutputStream outputStream = new FileOutputStream(outFile);
+            writeToOutputStream(inputStream, outputStream);
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Failed to copy data from asset file " + assetFileName
+                    + " to directory " + ringtonesDirectory, e);
+            return false;
+        }
+
+        // ContentValues for the required MediaStore listing for the ringtone.
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.TITLE, soundList.get(index).getName());
+        values.put(MediaStore.MediaColumns.SIZE, outFile.length());
+        values.put(MediaStore.MediaColumns.MIME_TYPE, getMIMEType(outFile.getAbsolutePath()));
+        values.put(MediaStore.Audio.Media.IS_RINGTONE, true);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+
+            // Android 10+ exclusive MediaStore ContentValues.
+            values.put(MediaStore.MediaColumns.RELATIVE_PATH, ringtonesDirectory.getName());
+            values.put(MediaStore.MediaColumns.DISPLAY_NAME, outFile.getName());
+
+            /* Android 10+ requires the ringtone to be copied to an OutputStream they provide given
+             * the MediaStore listing. MediaStore listing requires a File to get attributes from.
+             * This is why we copy-delete-copy the file from assets twice.  */
+            outFile.delete();
+
+            Uri newUri = context.getContentResolver().insert(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values);
+
+            try {
+                InputStream inputStream = assetManager.open(assetFileName);
+                OutputStream outputStream = context.getContentResolver().openOutputStream(newUri);
+                writeToOutputStream(inputStream, outputStream);
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "Failed to copy data from asset file " + assetFileName
+                        + " to directory " + ringtonesDirectory, e);
+                return false;
+            }
+
+            RingtoneManager.setActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE,
+                    newUri);
+
+        } else {
+
+            // Android 9- exclusive MediaStore ContentValues.
+            values.put(MediaStore.MediaColumns.DATA, outFile.getAbsolutePath());
+
+            // Android 9- way to set the ringtone.
+            Uri uri = MediaStore.Audio.Media.getContentUriForPath(outFile.getAbsolutePath());
+            context.getContentResolver().delete(uri,
+                    MediaStore.MediaColumns.DATA + "=\"" + outFile.getAbsolutePath() + "\"",
+                    null);
+            Uri newUri = context.getContentResolver().insert(uri, values);
+
+            RingtoneManager.setActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE,
+                    newUri);
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the MIME type of the given {@link String} URL. Will return null for URLs with no
+     * MIME type.
+     *
+     * @param url {@link String} URL.
+     * @return The MIME type of the given {@link String} URL.
+     */
+    private String getMIMEType(String url) {
+        String type = null;
+        String extension = MimeTypeMap.getFileExtensionFromUrl(url);
+        if (extension != null) {
+            type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+        }
+        return type;
+    }
+
+    /**
+     * Reads data from the given {@link InputStream} and writes it to the given
+     * {@link OutputStream}. It closes both streams on finish.
+     *
+     * @param inputStream  Open {@link InputStream} containing the data to be read from.
+     * @param outputStream Open {@link OutputStream} where the data will be written to.
+     * @throws IOException May be thrown by either the given {@link InputStream} or
+     *                     {@link OutputStream}.
+     */
+    private void writeToOutputStream(InputStream inputStream, OutputStream outputStream)
+            throws IOException {
+
+        // Copy the file.
+        byte[] buffer = new byte[1024];
+        int read;
+        while ((read = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, read);
+        }
+
+        // Cleanup.
+        inputStream.close();
+        outputStream.flush();
+        outputStream.close();
     }
 }

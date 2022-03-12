@@ -15,7 +15,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.PermissionInfo;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -37,9 +42,19 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     /**
-     * Int identifier for a permission request for write external storage.
+     * {@link String} tag for log messages originating from this {@link MainActivity}.
      */
-    private final int WRITE_EXTERNAL_STORAGE_REQUEST_CODE = 0;
+    private static final String LOG_TAG = MainActivity.class.getSimpleName();
+
+    /**
+     * Int identifier for a permission request to download a sound.
+     */
+    private final int DOWNLOAD_REQUEST_CODE = 0;
+
+    /**
+     * Int identifier for a permission request to set a sound as a ringtone.
+     */
+    private final int SET_AS_RINGTONE_REQUEST_CODE = 1;
 
     /**
      * {@link Soundboard} for getting sound names and playing sounds.
@@ -156,15 +171,60 @@ public class MainActivity extends AppCompatActivity {
          * device's downloads directory. */
         if (item.getItemId() == R.id.action_download) {
 
-            // Download only if permission to write external storage is granted.
-            if (checkForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                    R.string.write_external_storage_permission_needed_message,
-                    WRITE_EXTERNAL_STORAGE_REQUEST_CODE)) {
+            // Requires no permissions on Android 10+.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Perform action.
                 downloadSound();
-            } else {
-                // Show permission required snackbar.
-                Snackbar.make(soundRecyclerView, R.string.download_requires_permission_message,
-                        BaseTransientBottomBar.LENGTH_LONG).show();
+            }
+
+            // Requires write external storage permission on Android 9-.
+            else {
+                if (checkDangerousPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        R.string.download_rationale_dialog_message,
+                        DOWNLOAD_REQUEST_CODE)) {
+                    // Perform action.
+                    downloadSound();
+                } else {
+                    // Show permission required snackbar.
+                    Snackbar.make(soundRecyclerView,
+                            R.string.write_external_storage_required_message,
+                            BaseTransientBottomBar.LENGTH_LONG).show();
+                }
+            }
+
+            return true;
+        }
+
+        /* If "Set as Ringtone" is selected, set the sound that opened the context menu as the
+         * device's ringtone. */
+        if (item.getItemId() == R.id.action_set_as_ringtone) {
+
+            // Requires write settings permission on Android 10+.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (checkWriteSettingsPermission(R.string.set_as_ringtone_write_settings_rationale_dialog_message)) {
+                    // Perform action.
+                    setAsRingtone();
+                } else {
+                    // Show permission required snackbar.
+                    Snackbar.make(soundRecyclerView, R.string.write_settings_required_message,
+                            BaseTransientBottomBar.LENGTH_LONG).show();
+                }
+            }
+
+            // Requires write external storage and write settings permissions on Android 9-.
+            else {
+                if (checkDangerousPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        R.string.set_as_ringtone_write_external_storage_rationale_dialog_message,
+                        SET_AS_RINGTONE_REQUEST_CODE)
+                        && checkWriteSettingsPermission(R.string.set_as_ringtone_write_settings_rationale_dialog_message)) {
+                    // Perform action.
+                    setAsRingtone();
+                } else {
+                    // Show permission required snackbar.
+                    Snackbar.make(soundRecyclerView,
+                            R.string.write_external_storage_and_write_settings_required_message,
+                            BaseTransientBottomBar.LENGTH_LONG).show();
+                }
             }
 
             return true;
@@ -185,19 +245,29 @@ public class MainActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        /* For resulting granted requests to write external storage, download the sound that most
-         * recently opened a context menu to the device's downloads directory. */
-        if (requestCode == WRITE_EXTERNAL_STORAGE_REQUEST_CODE
+        /* For a result that requested permissions to download a sound, complete the download
+         * operation. */
+        if (requestCode == DOWNLOAD_REQUEST_CODE
                 && grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             downloadSound();
         }
+
+        /* For a result that requested permissions to set a ringtone, complete the ringtone set
+         * operation. */
+        if (requestCode == SET_AS_RINGTONE_REQUEST_CODE
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                && checkWriteSettingsPermission(R.string.set_as_ringtone_write_settings_rationale_dialog_message)) {
+            setAsRingtone();
+        }
     }
 
     /**
-     * Returns true if the specified permission has been granted. If false, then a rationale
-     * {@link AlertDialog} is shown that explains why this permission is required. Clicking "OK"
-     * on the dialog then requests the permission.
+     * Returns true if the specified dangerous permission has been granted. If false, then a
+     * rationale {@link AlertDialog} is shown that explains why this permission is required.
+     * Clicking "OK" on the dialog then requests the permission. This method should be used to check
+     * for permissions of dangerous protection level only.
      *
      * @param permission         {@link String} name of the permission being checked.
      * @param rationaleMessageId Int id of the string resource to be shown in the rationale
@@ -208,43 +278,101 @@ public class MainActivity extends AppCompatActivity {
      * @return True if the specified permission has already been granted. Will not return true for
      * a permission granted through this method's call.
      */
-    private boolean checkForPermission(String permission, int rationaleMessageId, int requestCode) {
+    private boolean checkDangerousPermission(String permission, int rationaleMessageId, int requestCode) {
+
+        // Return early for non-dangerous protection level permissions.
+        try {
+            if (getPackageManager().getPermissionInfo(permission, 0).protectionLevel
+                    != PermissionInfo.PROTECTION_DANGEROUS) {
+                Log.e(LOG_TAG, "Permission " + permission + " is not a dangerous protection level permission.");
+                return false;
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(LOG_TAG, "Cannot verify that permission " + permission + " is a dangerous protection level permission.", e);
+            return false;
+        }
 
         // Check if permission is already granted.
         if (ContextCompat.checkSelfPermission(this, permission)
                 != PackageManager.PERMISSION_GRANTED) {
 
             // Permission has not been granted. Check if a rationale AlertDialog should be shown.
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    permission)) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
 
                 // Show rationale AlertDialog explaining why this permission is needed.
-                new AlertDialog.Builder(this)
-                        .setTitle(R.string.permission_needed_dialog_label)
-                        .setMessage(rationaleMessageId)
-                        .setPositiveButton(android.R.string.ok,
-                                new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialogInterface, int i) {
-                                        // Request permission again.
-                                        ActivityCompat.requestPermissions(MainActivity.this,
-                                                new String[]{permission},
-                                                requestCode);
-                                    }
-                                })
-                        .create()
-                        .show();
+                DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        // Request permission again.
+                        ActivityCompat.requestPermissions(MainActivity.this,
+                                new String[]{permission},
+                                requestCode);
+                    }
+                };
+                showRequestPermissionRationaleDialog(rationaleMessageId, listener);
             }
 
             // Do not show rationale AlertDialog. Just request permission again.
             else {
                 ActivityCompat.requestPermissions(MainActivity.this,
-                        new String[]{permission}, requestCode);
+                        new String[]{permission},
+                        requestCode);
             }
+
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Returns true if the {@link Manifest.permission#WRITE_SETTINGS} permission has been granted.
+     * If false, then a rationale {@link AlertDialog} is shown that explains why this permission is
+     * required. Clicking "OK" on the dialog requests the permission.
+     *
+     * @param rationaleMessageId String resource to show in the request permission rationale dialog
+     *                           if this permission has not yet been granted. It should explain why
+     *                           this app needs the permission in question.
+     */
+    private boolean checkWriteSettingsPermission(int rationaleMessageId) {
+        // Return true if the permission is already granted.
+        if (Settings.System.canWrite(this)) {
+            return true;
+        }
+        // Show a rationale AlertDialog and request the permission if not already granted.
+        else {
+            DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialogInterface, int i) {
+                    Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                }
+            };
+            showRequestPermissionRationaleDialog(rationaleMessageId, listener);
+            return false;
+        }
+    }
+
+    /**
+     * Shows a rationale {@link AlertDialog} that explains why a particular permission must be
+     * granted to this app.
+     *
+     * @param rationaleMessageId String resource to be shown in the message field of the
+     *                           {@link AlertDialog}. Should explain why this app needs the
+     *                           permission in question.
+     * @param listener           {@link DialogInterface.OnClickListener} to execute when the
+     *                           positive button of the {@link AlertDialog} is clicked. Should
+     *                           contain code to request the permission in question.
+     */
+    private void showRequestPermissionRationaleDialog(int rationaleMessageId,
+                                                      DialogInterface.OnClickListener listener) {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.rationale_dialog_title)
+                .setMessage(rationaleMessageId)
+                .setPositiveButton(android.R.string.ok, listener)
+                .create()
+                .show();
     }
 
     /**
@@ -261,6 +389,25 @@ public class MainActivity extends AppCompatActivity {
                     BaseTransientBottomBar.LENGTH_SHORT).show();
         } else {
             Snackbar.make(soundRecyclerView, R.string.download_fail_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Copies the audio resource associated with the sound that most recently opened a context menu
+     * to the ringtones directory on the device's external storage. Then, it sets it as the device's
+     * ringtone.
+     */
+    private void setAsRingtone() {
+
+        boolean setAsRingtoneResult = soundboard.setAsRingtone(selectedSoundIndex, this);
+
+        // Show result status snackbar.
+        if (setAsRingtoneResult) {
+            Snackbar.make(soundRecyclerView, R.string.set_as_ringtone_success_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        } else {
+            Snackbar.make(soundRecyclerView, R.string.set_as_ringtone_fail_message,
                     BaseTransientBottomBar.LENGTH_SHORT).show();
         }
     }

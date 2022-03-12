@@ -9,15 +9,22 @@
     <!-- Sound options context menu. -->
     <string name="sound_options_dialog_label">Options for \"%1$s\"</string>
     <string name="download_option_label">Download</string>
+    <string name="set_as_ringtone_option_label">Set as Ringtone</string>
 
-    <!-- Request permission dialogs.  -->
-    <string name="permission_needed_dialog_label">Permission Needed</string>
-    <string name="write_external_storage_permission_needed_message">Vine Soundboard requires write external storage permission to put sounds in your Downloads folder.</string>
+    <!-- Request permission rationale dialogs.  -->
+    <string name="rationale_dialog_title">Permission Needed</string>
+    <string name="download_rationale_dialog_message">Vine Soundboard requires the write external storage permission to put this sound in your Downloads folder.</string>
+    <string name="set_as_ringtone_write_external_storage_rationale_dialog_message">Vine Soundboard requires the write external storage permission to set this sound as your ringtone.</string>
+    <string name="set_as_ringtone_write_settings_rationale_dialog_message">Vine Soundboard requires the write settings permission to set this sound as your ringtone. Enable this in your Settings app.</string>
 
-    <!-- Snackbar messages. -->
+    <!-- Snackbar messages resulting from context menu actions. -->
     <string name="download_success_message">Download successful</string>
     <string name="download_fail_message">Download failed</string>
-    <string name="download_requires_permission_message">Write external storage permission required.</string>
+    <string name="set_as_ringtone_success_message">Ringtone set successful</string>
+    <string name="set_as_ringtone_fail_message">Ringtone set failed</string>
+    <string name="write_external_storage_required_message">Write external storage permission required</string>
+    <string name="write_settings_required_message">Write settings permission required</string>
+    <string name="write_external_storage_and_write_settings_required_message">Write external storage and write settings permissions required</string>
 
     <!-- MainActivity app bar. -->
     <string name="settings_action_label">Settings</string>
