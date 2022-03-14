@@ -9,4 +9,12 @@
         android:id="@+id/action_set_as_ringtone"
         android:title="@string/set_as_ringtone_option_label" />
 
+    <item
+        android:id="@+id/action_set_as_notification_tone"
+        android:title="@string/set_as_notification_tone_option_label" />
+
+    <item
+        android:id="@+id/action_set_as_alarm_tone"
+        android:title="@string/set_as_alarm_tone_option_label" />
+
 </menu>

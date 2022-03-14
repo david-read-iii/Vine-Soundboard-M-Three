@@ -10,18 +10,28 @@
     <string name="sound_options_dialog_label">Options for \"%1$s\"</string>
     <string name="download_option_label">Download</string>
     <string name="set_as_ringtone_option_label">Set as Ringtone</string>
+    <string name="set_as_notification_tone_option_label">Set as Notification Sound</string>
+    <string name="set_as_alarm_tone_option_label">Set as Alarm Sound</string>
 
     <!-- Request permission rationale dialogs.  -->
     <string name="rationale_dialog_title">Permission Needed</string>
     <string name="download_rationale_dialog_message">Vine Soundboard requires the write external storage permission to put this sound in your Downloads folder.</string>
     <string name="set_as_ringtone_write_external_storage_rationale_dialog_message">Vine Soundboard requires the write external storage permission to set this sound as your ringtone.</string>
     <string name="set_as_ringtone_write_settings_rationale_dialog_message">Vine Soundboard requires the write settings permission to set this sound as your ringtone. Enable this in your Settings app.</string>
+    <string name="set_as_notification_tone_write_external_storage_rationale_dialog_message">Vine Soundboard requires the write external storage permission to set this sound as your notification sound.</string>
+    <string name="set_as_notification_tone_write_settings_rationale_dialog_message">Vine Soundboard requires the write settings permission to set this sound as your notification sound. Enable this in your Settings app.</string>
+    <string name="set_as_alarm_tone_write_external_storage_rationale_dialog_message">Vine Soundboard requires the write external storage permission to set this sound as your alarm sound.</string>
+    <string name="set_as_alarm_tone_write_settings_rationale_dialog_message">Vine Soundboard requires the write settings permission to set this sound as your alarm sound. Enable this in your Settings app.</string>
 
     <!-- Snackbar messages resulting from context menu actions. -->
     <string name="download_success_message">Download successful</string>
     <string name="download_fail_message">Download failed</string>
     <string name="set_as_ringtone_success_message">Ringtone set successful</string>
     <string name="set_as_ringtone_fail_message">Ringtone set failed</string>
+    <string name="set_as_notification_tone_success_message">Notification sound set successful</string>
+    <string name="set_as_notification_tone_fail_message">Notification sound set failed</string>
+    <string name="set_as_alarm_tone_success_message">Alarm sound set successful</string>
+    <string name="set_as_alarm_tone_fail_message">Alarm sound set failed</string>
     <string name="write_external_storage_required_message">Write external storage permission required</string>
     <string name="write_settings_required_message">Write settings permission required</string>
     <string name="write_external_storage_and_write_settings_required_message">Write external storage and write settings permissions required</string>

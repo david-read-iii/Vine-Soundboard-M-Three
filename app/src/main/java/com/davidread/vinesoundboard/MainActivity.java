@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.PermissionInfo;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -47,14 +48,12 @@ public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = MainActivity.class.getSimpleName();
 
     /**
-     * Int identifier for a permission request to download a sound.
+     * Int identifiers for permission requests to perform some action.
      */
     private final int DOWNLOAD_REQUEST_CODE = 0;
-
-    /**
-     * Int identifier for a permission request to set a sound as a ringtone.
-     */
     private final int SET_AS_RINGTONE_REQUEST_CODE = 1;
+    private final int SET_AS_NOTIFICATION_TONE_REQUEST_CODE = 2;
+    private final int SET_AS_ALARM_TONE_REQUEST_CODE = 3;
 
     /**
      * {@link Soundboard} for getting sound names and playing sounds.
@@ -230,6 +229,76 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
+        /* If "Set as Notification Sound" is selected, set the sound that opened the context menu as
+         * the device's notification tone. */
+        if (item.getItemId() == R.id.action_set_as_notification_tone) {
+
+            // Requires write settings permission on Android 10+.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (checkWriteSettingsPermission(R.string.set_as_notification_tone_write_settings_rationale_dialog_message)) {
+                    // Perform action.
+                    setAsNotificationTone();
+                } else {
+                    // Show permission required snackbar.
+                    Snackbar.make(soundRecyclerView, R.string.write_settings_required_message,
+                            BaseTransientBottomBar.LENGTH_LONG).show();
+                }
+            }
+
+            // Requires write external storage and write settings permissions on Android 9-.
+            else {
+                if (checkDangerousPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        R.string.set_as_notification_tone_write_external_storage_rationale_dialog_message,
+                        SET_AS_NOTIFICATION_TONE_REQUEST_CODE)
+                        && checkWriteSettingsPermission(R.string.set_as_notification_tone_write_settings_rationale_dialog_message)) {
+                    // Perform action.
+                    setAsNotificationTone();
+                } else {
+                    // Show permission required snackbar.
+                    Snackbar.make(soundRecyclerView,
+                            R.string.write_external_storage_and_write_settings_required_message,
+                            BaseTransientBottomBar.LENGTH_LONG).show();
+                }
+            }
+
+            return true;
+        }
+
+        /* If "Set as Alarm Sound" is selected, set the sound that opened the context menu as the
+         * device's alarm tone. */
+        if (item.getItemId() == R.id.action_set_as_alarm_tone) {
+
+            // Requires write settings permission on Android 10+.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                if (checkWriteSettingsPermission(R.string.set_as_alarm_tone_write_settings_rationale_dialog_message)) {
+                    // Perform action.
+                    setAsAlarmTone();
+                } else {
+                    // Show permission required snackbar.
+                    Snackbar.make(soundRecyclerView, R.string.write_settings_required_message,
+                            BaseTransientBottomBar.LENGTH_LONG).show();
+                }
+            }
+
+            // Requires write external storage and write settings permissions on Android 9-.
+            else {
+                if (checkDangerousPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        R.string.set_as_alarm_tone_write_external_storage_rationale_dialog_message,
+                        SET_AS_ALARM_TONE_REQUEST_CODE)
+                        && checkWriteSettingsPermission(R.string.set_as_alarm_tone_write_settings_rationale_dialog_message)) {
+                    // Perform action.
+                    setAsAlarmTone();
+                } else {
+                    // Show permission required snackbar.
+                    Snackbar.make(soundRecyclerView,
+                            R.string.write_external_storage_and_write_settings_required_message,
+                            BaseTransientBottomBar.LENGTH_LONG).show();
+                }
+            }
+
+            return true;
+        }
+
         return super.onContextItemSelected(item);
     }
 
@@ -255,11 +324,29 @@ public class MainActivity extends AppCompatActivity {
 
         /* For a result that requested permissions to set a ringtone, complete the ringtone set
          * operation. */
-        if (requestCode == SET_AS_RINGTONE_REQUEST_CODE
+        else if (requestCode == SET_AS_RINGTONE_REQUEST_CODE
                 && grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED
                 && checkWriteSettingsPermission(R.string.set_as_ringtone_write_settings_rationale_dialog_message)) {
             setAsRingtone();
+        }
+
+        /* For a result that requested permissions to set a notification tone, complete the
+         * notification tone set operation. */
+        else if (requestCode == SET_AS_NOTIFICATION_TONE_REQUEST_CODE
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                && checkWriteSettingsPermission(R.string.set_as_notification_tone_write_settings_rationale_dialog_message)) {
+            setAsNotificationTone();
+        }
+
+        /* For a result that requested permissions to set an alarm tone, complete the alarm tone set
+         * operation. */
+        else if (requestCode == SET_AS_ALARM_TONE_REQUEST_CODE
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                && checkWriteSettingsPermission(R.string.set_as_alarm_tone_write_settings_rationale_dialog_message)) {
+            setAsAlarmTone();
         }
     }
 
@@ -400,14 +487,55 @@ public class MainActivity extends AppCompatActivity {
      */
     private void setAsRingtone() {
 
-        boolean setAsRingtoneResult = soundboard.setAsRingtone(selectedSoundIndex, this);
+        boolean result = soundboard.setAsTone(selectedSoundIndex, RingtoneManager.TYPE_RINGTONE,
+                this);
 
         // Show result status snackbar.
-        if (setAsRingtoneResult) {
+        if (result) {
             Snackbar.make(soundRecyclerView, R.string.set_as_ringtone_success_message,
                     BaseTransientBottomBar.LENGTH_SHORT).show();
         } else {
             Snackbar.make(soundRecyclerView, R.string.set_as_ringtone_fail_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Copies the audio resource associated with the sound that most recently opened a context menu
+     * to the notifications directory on the device's external storage. Then, it sets it as the
+     * device's notification tone.
+     */
+    private void setAsNotificationTone() {
+
+        boolean result = soundboard.setAsTone(selectedSoundIndex, RingtoneManager.TYPE_NOTIFICATION,
+                this);
+
+        // Show result status snackbar.
+        if (result) {
+            Snackbar.make(soundRecyclerView, R.string.set_as_notification_tone_success_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        } else {
+            Snackbar.make(soundRecyclerView, R.string.set_as_notification_tone_fail_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Copies the audio resource associated with the sound that most recently opened a context menu
+     * to the alarms directory on the device's external storage. Then, it sets it as the device's
+     * alarm tone.
+     */
+    private void setAsAlarmTone() {
+
+        boolean result = soundboard.setAsTone(selectedSoundIndex, RingtoneManager.TYPE_ALARM,
+                this);
+
+        // Show result status snackbar.
+        if (result) {
+            Snackbar.make(soundRecyclerView, R.string.set_as_alarm_tone_success_message,
+                    BaseTransientBottomBar.LENGTH_SHORT).show();
+        } else {
+            Snackbar.make(soundRecyclerView, R.string.set_as_alarm_tone_fail_message,
                     BaseTransientBottomBar.LENGTH_SHORT).show();
         }
     }
