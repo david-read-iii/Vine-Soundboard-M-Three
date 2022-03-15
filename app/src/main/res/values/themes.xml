@@ -5,12 +5,10 @@
 
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/vine_green</item>
-        <item name="colorPrimaryVariant">@color/vine_green_dark</item>
         <item name="colorOnPrimary">@color/white</item>
 
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/white</item>
-        <item name="colorSecondaryVariant">@color/white</item>
         <item name="colorOnSecondary">@color/black</item>
 
         <!-- Background color. -->
@@ -21,10 +19,7 @@
         <item name="colorControlHighlight">@color/vine_green_light</item>
 
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-
-        <!-- Navigation bar color. -->
-        <item name="android:navigationBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
 
         <!-- Default Toolbar style. -->
         <item name="toolbarStyle">@style/ToolbarStyle</item>
