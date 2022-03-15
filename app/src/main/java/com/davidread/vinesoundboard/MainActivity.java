@@ -21,16 +21,25 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ContextMenu;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
+import com.google.android.gms.ads.initialization.InitializationStatus;
+import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -38,7 +47,8 @@ import java.util.List;
 
 /**
  * {@link MainActivity} is a soundboard user interface. It retrieves available sounds from
- * {@link #soundboard} and displays them in {@link #soundRecyclerView}.
+ * {@link #soundboard} and displays them in {@link #soundRecyclerView}. It displays an ad banner
+ * beneath the {@link #soundRecyclerView}.
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -77,14 +87,38 @@ public class MainActivity extends AppCompatActivity {
 
     /**
      * Invoked when this {@link MainActivity} is initially starting. It simply initializes the
-     * member variables of this class.
+     * member variables of this class. It also initializes the ad banner.
      */
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Initialize global Soundboard class reference.
         soundboard = Soundboard.getInstance(this);
+
+        // Initialize RecyclerView.
         soundRecyclerView = findViewById(R.id.sound_recycler_view);
+
+        // Initialize Google Mobile Ads SDK.
+        MobileAds.initialize(this, new OnInitializationCompleteListener() {
+            @Override
+            public void onInitializationComplete(InitializationStatus initializationStatus) {
+            }
+        });
+
+        // Create ad banner programmatically.
+        AdView adView = new AdView(this);
+        adView.setAdSize(getAdSize());
+        adView.setAdUnitId(BuildConfig.MAIN_ACTIVITY_AD_UNIT_ID);
+
+        // Add ad banner to ad container.
+        FrameLayout adContainer = findViewById(R.id.ad_container);
+        adContainer.addView(adView);
+
+        // Load ads for ad banner.
+        AdRequest adRequest = new AdRequest.Builder().build();
+        adView.loadAd(adRequest);
     }
 
     /**
@@ -538,6 +572,25 @@ public class MainActivity extends AppCompatActivity {
             Snackbar.make(soundRecyclerView, R.string.set_as_alarm_tone_fail_message,
                     BaseTransientBottomBar.LENGTH_SHORT).show();
         }
+    }
+
+    /**
+     * Returns an {@link AdSize} to set for {@link AdView#setAdSize(AdSize)} such that the banner
+     * will take up the entire width of the device's screen.
+     *
+     * @return An {@link AdSize} to set on an {@link AdView}.
+     */
+    private AdSize getAdSize() {
+
+        Display display = getWindowManager().getDefaultDisplay();
+        DisplayMetrics outMetrics = new DisplayMetrics();
+        display.getMetrics(outMetrics);
+
+        float widthPixels = outMetrics.widthPixels;
+        float density = outMetrics.density;
+        int adWidth = (int) (widthPixels / density);
+
+        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, adWidth);
     }
 
     /**
