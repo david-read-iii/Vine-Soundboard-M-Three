@@ -14,3 +14,7 @@
 .cxx
 local.properties
 /app/src/main/assets
+/.idea/.name
+/.idea/deploymentTargetDropDown.xml
+/.idea/gradle.xml
+/.idea/misc.xml
